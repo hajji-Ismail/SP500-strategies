@@ -1,5 +1,5 @@
-"""Backtest the daily top-k long/short portfolio against the available benchmark."""
-from pathlib import Path
+"""Create the strategy backtest and its three final output files."""
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,89 +8,108 @@ import pandas as pd
 from features_engineering import feature_engineering, load_data
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SIGNAL_FILE = "results/selected-model/ml_signal.csv"
+STOCK_FILE = "data/all_stocks_5yr.csv"
+BENCHMARK_FILE = "data/HistoricalData.csv"
+OUTPUT_FOLDER = "results/strategy"
+SPLIT_DATE = pd.Timestamp("2017-01-01")
 
 
-def calculate_max_drawdown(cumulative_value):
-    """Largest peak-to-trough loss of a cumulative wealth series."""
-    return (cumulative_value / cumulative_value.cummax() - 1).min()
+def max_drawdown(values):
+    return (values / values.cummax() - 1).min()
 
 
-def _load_benchmark(benchmark_path, dates, universe_returns):
-    path = Path(benchmark_path)
-    if path.exists():
-        raw = pd.read_csv(path)
-        raw.columns = raw.columns.str.strip()
-        if {"Date", "Close"}.issubset(raw.columns):
-            benchmark = raw.assign(date=pd.to_datetime(raw["Date"])).sort_values("date").set_index("date")["Close"].pct_change().shift(-1)
-            benchmark = benchmark.reindex(dates).dropna()
-            if not benchmark.empty:
-                return benchmark.rename("benchmark_daily_return"), "S&P 500 Index"
-    # The supplied HistoricalPrices.csv does not overlap the 2013-2018 constituent file.
-    # This deterministic fallback keeps the script runnable but must not be presented as the index.
-    return universe_returns.reindex(dates).dropna().rename("benchmark_daily_return"), "Equal-weight constituent proxy"
+def get_benchmark(dates, stock_returns):
+    """Use the index file when it overlaps; otherwise use the stock-universe average."""
+    for filename in [BENCHMARK_FILE, "data/HistoricalPrices.csv"]:
+        if not os.path.exists(filename):
+            continue
+        prices = pd.read_csv(filename)
+        prices.columns = prices.columns.str.strip()
+        if "Date" in prices and "Close" in prices:
+            prices["date"] = pd.to_datetime(prices["Date"])
+            returns = prices.sort_values("date").set_index("date")["Close"].pct_change().shift(-1)
+            returns = returns.reindex(dates).dropna()
+            if not returns.empty:
+                return returns.rename("benchmark"), "S&P 500"
+    return stock_returns.reindex(dates).rename("benchmark"), "Equal-weight stock proxy"
 
 
-def run_backtest(signal_path=PROJECT_ROOT / "results/selected-model/ml_signal.csv", data_path=PROJECT_ROOT / "data/all_stocks_5yr.csv", benchmark_path=PROJECT_ROOT / "data/HistoricalData.csv", output_dir=PROJECT_ROOT / "results/strategy", k=10):
-    output_dir = Path(output_dir); output_dir.mkdir(parents=True, exist_ok=True)
-    signals = pd.read_csv(signal_path, parse_dates=["date"]).set_index(["date", "ticker"]).sort_index()
-    data = feature_engineering(load_data(data_path))
-    merged = signals.join(data[["forward_return"]], how="inner").dropna()
-    if merged.empty:
-        raise ValueError("No overlapping signals and forward returns.")
+def save_strategy_plot(wealth, benchmark_name):
+    """Save results/strategy/strategy.png."""
+    plt.figure(figsize=(12, 6))
+    plt.plot(wealth.index, wealth["strategy"], label="ML long/short strategy", color="navy")
+    plt.plot(wealth.index, wealth["benchmark"], label=benchmark_name, color="darkorange")
+    plt.axvline(SPLIT_DATE, color="red", linestyle="--", label="Train/test split")
+    plt.title("Strategy PnL vs benchmark")
+    plt.xlabel("Date")
+    plt.ylabel("Cumulative PnL ($1 base)")
+    plt.ylim(min(wealth.min()) * 0.95, max(wealth.max()) * 1.05)
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(f"{OUTPUT_FOLDER}/strategy.png", dpi=200)
+    plt.close()
 
-    def daily_return(group):
-        if len(group) < 2 * k:
-            return np.nan
-        ranked = group.sort_values("signal")
-        # Gross capital is $1/day: +$0.50 long and -$0.50 short.
-        return ranked.tail(k)["forward_return"].mean() * .5 - ranked.head(k)["forward_return"].mean() * .5
 
-    strategy = merged.groupby(level="date", group_keys=False).apply(daily_return).dropna().rename("strategy_daily_return")
-    universe = data["forward_return"].groupby(level="date").mean()
-    if not Path(benchmark_path).exists():
-        alternate = PROJECT_ROOT / "data/HistoricalPrices.csv"
-        benchmark_path = alternate if alternate.exists() else benchmark_path
-    benchmark, benchmark_label = _load_benchmark(benchmark_path, strategy.index, universe)
-    returns = pd.concat([strategy, benchmark], axis=1, join="inner").dropna()
-    wealth = (1 + returns).cumprod()
-    split = pd.Timestamp("2017-01-01")
+def save_results_csv(returns):
+    """Save results/strategy/results.csv."""
     rows = []
-    for period, mask in {"train": returns.index < split, "test": returns.index >= split}.items():
-        period_returns = returns.loc[mask]
-        for column in returns:
-            value = (1 + period_returns[column]).cumprod()
-            rows.extend([{"period": period, "series": column, "metric": "total_return", "value": (1 + period_returns[column]).prod() - 1}, {"period": period, "series": column, "metric": "max_drawdown", "value": calculate_max_drawdown(value)}])
+    for period, period_returns in {"train": returns[returns.index < SPLIT_DATE], "test": returns[returns.index >= SPLIT_DATE]}.items():
+        for name in ["strategy", "benchmark"]:
+            wealth = (1 + period_returns[name]).cumprod()
+            rows.append({"period": period, "series": name, "total_return": (1 + period_returns[name]).prod() - 1, "max_drawdown": max_drawdown(wealth)})
     results = pd.DataFrame(rows)
-    results.to_csv(output_dir / "results.csv", index=False)
+    results.to_csv(f"{OUTPUT_FOLDER}/results.csv", index=False)
+    return results
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.plot(wealth.index, wealth["strategy_daily_return"], label="ML top-10 long/short strategy", color="navy")
-    ax.plot(wealth.index, wealth["benchmark_daily_return"], label=benchmark_label, color="darkorange", linestyle="--")
-    ax.axvline(split, color="crimson", linestyle=":", label="Train/test split")
-    ax.set(xlabel="Date", ylabel="Cumulative wealth ($1 base)", title="Strategy and benchmark cumulative PnL")
-    ax.grid(alpha=.3); ax.legend(); fig.tight_layout(); fig.savefig(output_dir / "strategy.png", dpi=200); plt.close(fig)
 
-    report = f"""# Quantitative ML Strategy Report
+def save_report(results, benchmark_name):
+    """Save results/strategy/report.md."""
+    report = f"""# Strategy Report
 
-## Data and leakage controls
-The data set contains daily OHLCV observations for S&P 500 constituents. Features are calculated separately per ticker and use only data available at the close of date D. `forward_return` is `(close[D+2] / close[D+1]) - 1`; the binary target is one when that return is positive. The train period ends on 2016-12-31 and the test period begins on 2017-01-01.
-
-## Features and model
-Features are RSI(14), MACD(12, 26, 9), and 20-day Bollinger upper, middle, and lower bands. The pipeline is `StandardScaler` followed by `XGBClassifier`; it contains no imputer or dimensionality-reduction stage because rows with incomplete indicator lookback are excluded. Hyperparameters and fold results are saved with the model artifacts.
-
-## Validation and signals
-The model uses ten expanding, date-level time-series folds. Its first training window is more than two years; every validation window is later in time and the final validation window ends before the test period. Training signals are strictly out-of-fold: each validation prediction comes from a model fitted only on preceding dates. The test signal comes from a model fitted on all training data.
+## Model and features
+The model uses RSI, MACD and Bollinger Bands. It is evaluated with 10 expanding time-series folds. Features on date D only use information available on D, and the target is the return from D+1 to D+2.
 
 ## Strategy
-For each date, the strategy buys the ten highest-probability names and shorts the ten lowest-probability names. It assigns $0.50 to each side, equally divided among its ten names, so gross daily capital is $1. Each position is multiplied by the same `forward_return` that the signal predicts: return(D+1, D+2).
+Each day, the strategy buys the 10 highest model signals and shorts the 10 lowest signals. It allocates $0.50 to longs and $0.50 to shorts, for $1 total daily capital. PnL uses the forward return from D+1 to D+2.
 
 ## Results
-See [results.csv](results.csv) for total return and maximum drawdown by period, and [strategy.png](strategy.png) for cumulative PnL. Benchmark used: **{benchmark_label}**. Replace the supplied non-overlapping historical-price file with `data/HistoricalData.csv` covering the backtest period to compare directly against the S&P 500 index.
+Benchmark: **{benchmark_name}**.
+
+```
+{results.to_string(index=False)}
+```
+
+See [strategy.png](strategy.png) for the PnL chart.
 """
-    (output_dir / "report.md").write_text(report)
-    print(f"Saved strategy results to {output_dir}")
+    with open(f"{OUTPUT_FOLDER}/report.md", "w") as file:
+        file.write(report)
+
+
+def main():
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+    signals = pd.read_csv(SIGNAL_FILE, parse_dates=["date"]).set_index(["date", "ticker"])
+    data = feature_engineering(load_data(STOCK_FILE))
+    positions = signals.join(data[["forward_return"]], how="inner").dropna()
+
+    def daily_strategy(group):
+        if len(group) < 20:
+            return np.nan
+        ranked = group.sort_values("signal")
+        return 0.5 * ranked.tail(10)["forward_return"].mean() - 0.5 * ranked.head(10)["forward_return"].mean()
+
+    strategy = positions.groupby(level="date").apply(daily_strategy).dropna().rename("strategy")
+    stock_returns = data["forward_return"].groupby(level="date").mean()
+    benchmark, benchmark_name = get_benchmark(strategy.index, stock_returns)
+    returns = pd.concat([strategy, benchmark], axis=1).dropna()
+    wealth = (1 + returns).cumprod()
+
+    save_strategy_plot(wealth, benchmark_name)
+    results = save_results_csv(returns)
+    save_report(results, benchmark_name)
+    print("Saved strategy.png, results.csv and report.md")
 
 
 if __name__ == "__main__":
-    run_backtest()
+    main()

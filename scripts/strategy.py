@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from features_engineering import feature_engineering, load_data
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,10 +31,10 @@ def _load_benchmark(benchmark_path, dates, universe_returns):
     return universe_returns.reindex(dates).dropna().rename("benchmark_daily_return"), "Equal-weight constituent proxy"
 
 
-def run_backtest(signal_path=PROJECT_ROOT / "results/selected-model/ml_signal.csv", data_path=PROJECT_ROOT / "data/processed_data.csv", benchmark_path=PROJECT_ROOT / "data/HistoricalData.csv", output_dir=PROJECT_ROOT / "results/strategy", k=10):
+def run_backtest(signal_path=PROJECT_ROOT / "results/selected-model/ml_signal.csv", data_path=PROJECT_ROOT / "data/all_stocks_5yr.csv", benchmark_path=PROJECT_ROOT / "data/HistoricalData.csv", output_dir=PROJECT_ROOT / "results/strategy", k=10):
     output_dir = Path(output_dir); output_dir.mkdir(parents=True, exist_ok=True)
     signals = pd.read_csv(signal_path, parse_dates=["date"]).set_index(["date", "ticker"]).sort_index()
-    data = pd.read_csv(data_path, parse_dates=["date"]).set_index(["date", "ticker"]).sort_index()
+    data = feature_engineering(load_data(data_path))
     merged = signals.join(data[["forward_return"]], how="inner").dropna()
     if merged.empty:
         raise ValueError("No overlapping signals and forward returns.")

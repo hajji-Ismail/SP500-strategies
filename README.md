@@ -41,13 +41,14 @@ python scripts/create_signal.py
 python scripts/strategy.py
 ```
 
+The engineered data is created in memory when needed; no `processed_data.csv` file is created.
+
 `gridsearch.py` is optional if the default model settings are acceptable. When it runs, its selected parameters are saved and automatically consumed by `model_selection.py`.
 
 ## Outputs
 
 | Location | Contents |
 | --- | --- |
-| `data/processed_data.csv` | Engineered features, target, and correctly aligned forward return |
 | `results/cross-validation/` | Fold diagram, metrics, metric plot, and per-fold top-ten feature importance |
 | `results/selected-model/` | Serialized selected pipeline, readable settings/metrics, and ML signal |
 | `results/strategy/` | Cumulative PnL plot, performance table, and backtest report |

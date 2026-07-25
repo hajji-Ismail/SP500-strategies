@@ -5,6 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -53,11 +54,16 @@ def run_model_selection():
     metrics_df = pd.DataFrame(metrics)
     metrics_df.to_csv(CV_DIR / "ml_metrics_train.csv", index=False)
     pd.concat(importance, ignore_index=True).to_csv(CV_DIR / "top_10_feature_importance.csv", index=False)
+    train_metrics = metrics_df.query("sample == 'train'")
     validation = metrics_df.query("sample == 'validation'")
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(validation["fold"], validation["auc"], "o-", label="Validation ROC-AUC")
-    ax.plot(validation["fold"], validation["accuracy"], "s-", label="Validation accuracy")
-    ax.set(xlabel="Fold number", ylabel="Score", title="Validation metrics across expanding temporal folds")
+    folds = np.arange(1, len(validation) + 1)
+    width = 0.38
+    ax.bar(folds - width / 2, train_metrics["auc"], width, label="Train AUC", color="navy")
+    ax.bar(folds + width / 2, validation["auc"], width, label="Validation AUC", color="darkorange")
+    ax.set(xlabel="Fold number", ylabel="AUC", title="Train and validation AUC across temporal folds")
+    ax.set_xticks(folds)
+    ax.set_ylim(0, 1)
     ax.grid(alpha=.3); ax.legend(); fig.tight_layout(); fig.savefig(CV_DIR / "metric_train.png", dpi=200); plt.close(fig)
 
     final_model = build_pipeline(params).fit(X, y)

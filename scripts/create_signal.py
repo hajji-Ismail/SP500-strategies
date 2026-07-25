@@ -4,15 +4,16 @@ from pathlib import Path
 
 import pandas as pd
 
+from features_engineering import feature_engineering, load_data
 from gridsearch import create_constrained_time_series_splits
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def generate_signals(data_path=PROJECT_ROOT / "data/processed_data.csv", model_path=PROJECT_ROOT / "results/selected-model/selected_model.pkl", output_path=PROJECT_ROOT / "results/selected-model/ml_signal.csv"):
+def generate_signals(data_path=PROJECT_ROOT / "data/all_stocks_5yr.csv", model_path=PROJECT_ROOT / "results/selected-model/selected_model.pkl", output_path=PROJECT_ROOT / "results/selected-model/ml_signal.csv"):
     data_path, model_path, output_path = map(Path, (data_path, model_path, output_path))
-    df = pd.read_csv(data_path, parse_dates=["date"]).set_index(["date", "ticker"]).sort_index()
+    df = feature_engineering(load_data(data_path))
     if not model_path.exists():
         raise FileNotFoundError(f"Model not found: {model_path}. Run model_selection.py first.")
     with model_path.open("rb") as handle:

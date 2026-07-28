@@ -20,7 +20,6 @@ def max_drawdown(values):
 
 
 def get_benchmark(dates, stock_returns):
-    """Use the index file when it overlaps; otherwise use the stock-universe average."""
     for filename in [BENCHMARK_FILE, "data/HistoricalPrices.csv"]:
         if not os.path.exists(filename):
             continue
@@ -89,7 +88,7 @@ See [strategy.png](strategy.png) for the PnL chart.
 
 def main():
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    signals = pd.read_csv(SIGNAL_FILE, parse_dates=["date"]).set_index(["date", "ticker"])
+    signals = pd.read_csv(SIGNAL_FILE, parse_dates=["date"]).set_index(["date", "Name"])
     data = feature_engineering(load_data(STOCK_FILE))
     positions = signals.join(data[["forward_return"]], how="inner").dropna()
 

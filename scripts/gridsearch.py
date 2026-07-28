@@ -44,10 +44,7 @@ def create_constrained_time_series_splits(df, n_splits=10, min_train_years=2.0):
 
 
 def save_cv_plot(df, cv_splits, save_path='results/cross-validation/Time_series_split.png'):
-    """
-    Generates a horizontal time-series split chart displaying scatter dots 
-    alongside a connecting solid line for both Train and Validation sets.
-    """
+  
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -89,15 +86,13 @@ def run_grid_search():
     # 1. Load engineered datasets
     df_train, df_test = main()
 
-    # 2. Extract feature columns and target
-    non_feature_cols = ["open", "high", "low", "close", "volume", "target", "Name", "date"]
+    non_feature_cols = ["open", "high", "low", "close", "volume", "target", "Name", "date", "forward_return"]
     feature_cols = [c for c in df_train.columns if c not in non_feature_cols]
 
     X_train = df_train[feature_cols]
     y_train = df_train["target"]
 
-    # Convert continuous target to binary classification classes {-1, 1} -> {0, 1} if required by XGBoost
-    # np.sign gives -1, 0, 1. For binary classification, map >0 to 1 else 0
+ 
     y_train_binary = (y_train > 0).astype(int)
 
     # 3. Pipeline setup

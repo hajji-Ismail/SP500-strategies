@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 from sklearn.base import clone
 
-from features_engineering import feature_engineering, load_data
+from features_engineering import feature_engineering, load_data, split_train_test
 from gridsearch import create_constrained_time_series_splits
 
 
@@ -19,9 +19,9 @@ def generate_signals():
 
     with open(model_path, "rb") as f:
         selected_model = pickle.load(f)
-    features = [c for c in df.columns if c not in {"target", "forward_return"}]
-    train = df.loc[df.index.get_level_values("date") < pd.Timestamp("2017-01-01")]
-    test = df.loc[df.index.get_level_values("date") >= pd.Timestamp("2017-01-01")]
+    features = [c for c in df.columns if c not in {"Name", "forward_return"}]
+    train, test = split_train_test(df)
+    
     signals = []
     for _, (train_idx, val_idx) in enumerate(create_constrained_time_series_splits(train), 1):
         model = clone(selected_model).fit(train.iloc[train_idx][features], (train.iloc[train_idx]["target"] > 0).astype(int))

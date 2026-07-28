@@ -26,7 +26,8 @@ The target alignment is deliberate. At D, indicators contain no data after D. Th
 Use Python 3.10+ and install the dependencies:
 
 ```bash
-python -m pip install -r requirements.txt
+conda create --name <env> --file <this file>
+
 ```
 
 ## Run the workflow
@@ -34,8 +35,6 @@ python -m pip install -r requirements.txt
 Run commands from the project root, in this order:
 
 ```bash
-python scripts/features_engineering.py
-python scripts/gridsearch.py
 python scripts/model_selection.py
 python scripts/create_signal.py
 python scripts/strategy.py

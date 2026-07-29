@@ -22,7 +22,6 @@ MODEL_DIR = "results/selected-model"
 
 
 def load_and_prepare_data():
-    """Loads dataset from feature engineering and extracts features/target."""
     df_train, df_test = main()
 
     non_feature_cols = ["open", "high", "low", "close", "volume", "target", "Name", "date"]

@@ -11,9 +11,7 @@ from features_engineering import main
 
 
 def create_constrained_time_series_splits(df, n_splits=10, min_train_years=2.0):
-    """
-    Creates custom time-series splits for a MultiIndex DataFrame indexed by ('date', 'Name').
-    """
+   
     # 1. Get unique sorted dates from the MultiIndex level 'date'
     dates_level = df.index.get_level_values("date")
     unique_dates = dates_level.unique().sort_values().values

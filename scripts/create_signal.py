@@ -1,4 +1,3 @@
-"""Generate leakage-free out-of-fold train signals and final-model test signals."""
 import pickle
 from pathlib import Path
 

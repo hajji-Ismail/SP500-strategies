@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.base import clone
 
 from features_engineering import feature_engineering, load_data, split_train_test
-from gridsearch import create_constrained_time_series_splits
+from gridsearch import time_series_splits
 
 
 data_path= "./data/all_stocks_5yr.csv"
@@ -22,7 +22,7 @@ def generate_signals():
     train, test = split_train_test(df)
     
     signals = []
-    for _, (train_idx, val_idx) in enumerate(create_constrained_time_series_splits(train), 1):
+    for _, (train_idx, val_idx) in enumerate(time_series_splits(train), 1):
         model = clone(selected_model).fit(train.iloc[train_idx][features], (train.iloc[train_idx]["target"] > 0).astype(int))
         values = model.predict_proba(train.iloc[val_idx][features])[:, 1]
         signals.append(pd.Series(values, index=train.iloc[val_idx].index, name="signal"))

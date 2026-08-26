@@ -11,12 +11,11 @@ def load_data(filepath="./data/all_stocks_5yr.csv"):
 
     df["date"] = pd.to_datetime(df["date"])
 
-    # Sort BEFORE computing indicators
     df.sort_values(["Name", "date"], inplace=True)
 
     return df
 
-def feature_engineering(df):
+def feature_engineering(df : pd.DataFrame):
    
     frames = []
     for name, group in df.groupby("Name", sort=False):
@@ -66,13 +65,13 @@ def main() :
 
     print("Loading data...")
     df = load_data()
-
     print("Performing feature engineering...")
     df = feature_engineering(df)
-
     print("Splitting train/test...")
     train_df, test_df = split_train_test(df)
+
     return train_df, test_df
+
 
 
 if __name__ == "__main__":

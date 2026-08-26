@@ -10,7 +10,7 @@ from features_engineering import feature_engineering, load_data
 
 SIGNAL_FILE = "results/selected-model/ml_signal.csv"
 STOCK_FILE = "data/all_stocks_5yr.csv"
-BENCHMARK_FILE = "data/HistoricalData.csv"
+BENCHMARK_FILE = "data/HistoricalPrices.csv"
 OUTPUT_FOLDER = "results/strategy"
 SPLIT_DATE = pd.Timestamp("2017-01-01")
 
@@ -20,22 +20,20 @@ def max_drawdown(values):
 
 
 def get_benchmark(dates, stock_returns):
-    for filename in [BENCHMARK_FILE, "data/HistoricalPrices.csv"]:
-        if not os.path.exists(filename):
-            continue
+        filename = BENCHMARK_FILE
+          
         prices = pd.read_csv(filename)
         prices.columns = prices.columns.str.strip()
-        if "Date" in prices and "Close" in prices:
-            prices["date"] = pd.to_datetime(prices["Date"])
-            returns = prices.sort_values("date").set_index("date")["Close"].pct_change().shift(-1)
-            returns = returns.reindex(dates).dropna()
-            if not returns.empty:
-                return returns.rename("benchmark"), "S&P 500"
-    return stock_returns.reindex(dates).rename("benchmark"), "Equal-weight stock proxy"
+        
+        prices["date"] = pd.to_datetime(prices["Date"])
+        returns = prices.sort_values("date").set_index("date")["Close"].pct_change().shift(-1)
+        returns = returns.reindex(dates).dropna()
+        if not returns.empty:
+            return returns.rename("benchmark"), "S&P 500"
+        return stock_returns.reindex(dates).rename("benchmark"), "Equal-weight stock proxy"
 
 
 def save_strategy_plot(wealth, benchmark_name):
-    """Save results/strategy/strategy.png."""
     plt.figure(figsize=(12, 6))
     plt.plot(wealth.index, wealth["strategy"], label="ML long/short strategy", color="navy")
     plt.plot(wealth.index, wealth["benchmark"], label=benchmark_name, color="darkorange")
@@ -52,7 +50,6 @@ def save_strategy_plot(wealth, benchmark_name):
 
 
 def save_results_csv(returns):
-    """Save results/strategy/results.csv."""
     rows = []
     for period, period_returns in {"train": returns[returns.index < SPLIT_DATE], "test": returns[returns.index >= SPLIT_DATE]}.items():
         for name in ["strategy", "benchmark"]:

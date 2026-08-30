@@ -43,7 +43,7 @@ def feature_engineering(df : pd.DataFrame):
 
         # On D, only prices through D are features; this is the held-period return.
         group["forward_return"] = close.shift(-2).div(close.shift(-1)).sub(1)
-        group["target"] = np.sign(group["forward_return"]).astype(float)
+        group["target"] = np.sign(group["forward_return"]) + 2
         frames.append(group)
 
     features = pd.concat(frames, ignore_index=True)

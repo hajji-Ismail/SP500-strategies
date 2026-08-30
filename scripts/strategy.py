@@ -21,8 +21,8 @@ def calculate_signal_pnl(signals_df, stock_data_df):
     combined = signals_df.join(stock_data_df[['forward_return']], how='inner').dropna()
 
     def process_daily_pnl(group):
-        longs = group[group['signal'] < 1]
-        shorts = group[group['signal'] >= 1]
+        longs = group[group['signal'] == 3.0]
+        shorts = group[group['signal'] == 1.0]
         
         long_pnl = 0.0
         short_pnl = 0.0
@@ -84,7 +84,7 @@ def main():
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     
     signals = pd.read_csv(SIGNAL_FILE, parse_dates=["date"]).set_index(["date", "Name"])
-    data = feature_engineering(load_data(STOCK_FILE))  # Contains 'forward_return' and multi-index ['date', 'Name']
+    data = feature_engineering(load_data(STOCK_FILE))  
     benchmark_df = pd.read_csv(BENCHMARK_FILE)
     
     strategy = calculate_signal_pnl(signals, data)

@@ -46,17 +46,17 @@ def evaluate_single_fold(fold, pipeline, X_tr, y_tr, X_val, y_val, feature_cols)
     pipeline.fit(X_tr, y_tr)
 
     tr_preds = pipeline.predict(X_tr)
-    tr_probs = pipeline.predict_proba(X_tr)[:, 1]
+    tr_probs = pipeline.predict_proba(X_tr)
 
     val_preds = pipeline.predict(X_val)
-    val_probs = pipeline.predict_proba(X_val)[:, 1]
+    val_probs = pipeline.predict_proba(X_val)
 
     fold_metrics = {
         'fold': fold + 1,
         'train_accuracy': accuracy_score(y_tr, tr_preds),
         'val_accuracy': accuracy_score(y_val, val_preds),
-        'train_auc': roc_auc_score(y_tr, tr_probs),
-        'val_auc': roc_auc_score(y_val, val_probs),
+        'train_auc': roc_auc_score(y_tr, tr_probs, multi_class='ovr'),
+        'val_auc': roc_auc_score(y_val, val_probs, multi_class='ovr'),
         'train_logloss': log_loss(y_tr, tr_probs),
         'val_logloss': log_loss(y_val, val_probs)
     }
@@ -195,14 +195,14 @@ def run_grid_search():
 
     df_train, _ = main()
 
-    non_feature_cols = ["target", "Name", "date", "forward_return"]
+    non_feature_cols = [ "target", "Name", "date","forward_return", "high","low", "open", "close", "volume" ]
+
     feature_cols = [c for c in df_train.columns if c not in non_feature_cols]
 
     X_train = df_train[feature_cols]
     y_train = df_train["target"]
 
  
-    y_train_binary = (y_train > 0).astype(int)
 
     model = run_model_selection()
 
@@ -224,8 +224,8 @@ def run_grid_search():
         verbose=1
     )
 
-    grid_search.fit(X_train, y_train_binary)
-    metrics_list, feature_importances_list = run_cross_validation(df_train, X_train, y_train_binary, feature_cols, model)
+    grid_search.fit(X_train, y_train)
+    metrics_list, feature_importances_list = run_cross_validation(df_train, X_train, y_train, feature_cols, model)
     metrics_df, mean_row = process_and_save_metrics(metrics_list)
     top_10_features = process_and_save_feature_importances(feature_importances_list)
 

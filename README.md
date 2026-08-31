@@ -35,14 +35,14 @@ conda create --name <env> --file <this file>
 Run commands from the project root, in this order:
 
 ```bash
-python scripts/model_selection.py
+python scripts/gridsearch.py
 python scripts/create_signal.py
 python scripts/strategy.py
 ```
 
 The engineered data is created in memory when needed; no `processed_data.csv` file is created.
 
-`gridsearch.py` is optional if the default model settings are acceptable. When it runs, its selected parameters are saved and automatically consumed by `model_selection.py`.
+
 
 ## Outputs
 

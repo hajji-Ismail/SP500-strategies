@@ -1,28 +1,19 @@
 from sklearn.linear_model import LogisticRegression, RidgeClassifier
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
-
 from lightgbm import LGBMClassifier
-from xgboost import XGBClassifier
-from catboost import CatBoostClassifier
-
 from features_engineering import main
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
-
-
 def load_and_prepare_data():
-    df_train, df_test = main()
-
+    df_train, _ = main()
     non_feature_cols = [ "target", "Name", "date","forward_return", "high","low", "open", "close", "volume" ]
     feature_cols = [c for c in df_train.columns if c not in non_feature_cols]
-
     X_train = df_train[feature_cols]
     y_train = df_train["target"] 
-
     return  X_train, y_train
 def candidate_models():
     return [
@@ -49,7 +40,6 @@ def candidate_models():
                 ("model", LGBMClassifier(random_state=42, verbose=-1, objective="multiclass", num_class=3))
             ])
         ),
-     
         (
             "rf",
             Pipeline([

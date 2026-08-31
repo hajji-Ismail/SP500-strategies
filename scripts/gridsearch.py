@@ -13,15 +13,12 @@ CV_DIR = "results/cross-validation"
 
 def time_series_splits(df, n_splits=10, min_train_years=2.0):
    
-    # 1. Get unique sorted dates from the MultiIndex level 'date'
     dates_level = df.index.get_level_values("date")
     unique_dates = dates_level.unique().sort_values().values
     total_dates = len(unique_dates)
 
-    # 2. Estimate trading days per year (~252 days/year)
     min_train_days = int(min_train_years * 252)
 
-    # Check remaining dates for 10 validation splits
     remaining_dates = total_dates - min_train_days
     val_size = remaining_dates // n_splits
 
@@ -33,7 +30,6 @@ def time_series_splits(df, n_splits=10, min_train_years=2.0):
         train_dates = unique_dates[0:val_start_idx]
         val_dates = unique_dates[val_start_idx:val_end_idx]
 
-        # Match dates against the 'date' level of MultiIndex
         train_indices = np.where(dates_level.isin(train_dates))[0]
         val_indices = np.where(dates_level.isin(val_dates))[0]
 

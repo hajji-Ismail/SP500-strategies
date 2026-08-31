@@ -18,7 +18,7 @@ def load_data(filepath="./data/all_stocks_5yr.csv"):
 def feature_engineering(df : pd.DataFrame):
    
     frames = []
-    for name, group in df.groupby("Name", sort=False):
+    for _, group in df.groupby("Name", sort=False):
         group = group.sort_values("date").copy()
         close = group["close"].astype(float)
 
@@ -41,7 +41,6 @@ def feature_engineering(df : pd.DataFrame):
         group["BB_UPPER"] = middle + 2 * std
         group["BB_LOWER"] = middle - 2 * std
 
-        # On D, only prices through D are features; this is the held-period return.
         group["forward_return"] = close.shift(-2).div(close.shift(-1)).sub(1)
         group["target"] = np.sign(group["forward_return"]) + 2
         frames.append(group)

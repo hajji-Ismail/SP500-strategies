@@ -25,14 +25,7 @@ def candidate_models():
                 ("model", LogisticRegression(max_iter=2000, solver="lbfgs", random_state=42))
             ])
         ),
-        (
-            "ridge",
-            Pipeline([
-                ("imputer", SimpleImputer(strategy="median")),
-                ("scaler", StandardScaler()),
-                ("model", CalibratedClassifierCV(estimator=RidgeClassifier()))
-            ])
-        ),
+ 
         (
             "lgbm",
             Pipeline([

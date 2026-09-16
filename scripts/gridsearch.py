@@ -203,11 +203,11 @@ def run_grid_search():
     model = run_model_selection()
 
     param_grid = {
-        'model__iterations': [100, 200],
-        'model__depth': [3, 5],
-        'model__learning_rate': [0.01, 0.1],
-        'model__l2_leaf_reg': [1, 3, 5]
-    }
+    'model__n_estimators': [100, 200],
+    'model__max_depth': [3, 5, -1],
+    'model__learning_rate': [0.01, 0.1],
+    'model__reg_lambda': [1.0, 3.0, 5.0]
+}
     cv_splits = time_series_splits(df_train, n_splits=10, min_train_years=2.0)
     save_cv_plot(df_train, cv_splits)
 

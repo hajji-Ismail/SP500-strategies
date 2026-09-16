@@ -25,9 +25,13 @@ def calculate_signal_pnl(signals_df, stock_data_df):
         long_pnl = 0.0
         short_pnl = 0.0
         
-        long_pnl = 0.5 * longs['forward_return'].mean()
-        short_pnl = -0.5 * shorts['forward_return'].mean()
-
+        if not longs.empty and not shorts.empty:
+            long_pnl = 0.5 * longs['forward_return'].mean()
+            short_pnl = -0.5 * shorts['forward_return'].mean()
+        elif not longs.empty:
+            long_pnl = 1.0 * longs['forward_return'].mean()
+        elif not shorts.empty:
+            short_pnl = -1.0 * shorts['forward_return'].mean()
             
         return long_pnl + short_pnl
 

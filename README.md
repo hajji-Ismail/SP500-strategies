@@ -16,7 +16,7 @@ Raw data is loaded from `data/all_stocks_5yr.csv`. All calculations are grouped 
 | Target | `sign(close[D+2] / close[D+1] - 1)` |
 | Split | Train: dates before 2017-01-01; test: dates on/after 2017-01-01 |
 | Validation | 10 expanding time-series folds, split by whole dates; first training window exceeds two years |
-| Pipeline | `StandardScaler` → `XGBClassifier` |
+| Pipeline | `StandardScaler` → `lightGBM` |
 | Portfolio | Long 10 highest signals / short 10 lowest signals; $0.50 per side, $1 gross capital per day |
 
 The target alignment is deliberate. At D, indicators contain no data after D. The signal is used for the holding-period return from D+1 to D+2; using a contemporaneous or past return would misalign the strategy and can introduce leakage.
